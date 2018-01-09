@@ -6,7 +6,9 @@
 package hr.iandrijic.garmin.fit;
 
 import com.garmin.fit.Decode;
+import com.garmin.fit.DeveloperField;
 import com.garmin.fit.Field;
+import com.garmin.fit.FieldBase;
 import com.garmin.fit.FileEncoder;
 import com.garmin.fit.Fit;
 import com.garmin.fit.FitRuntimeException;
@@ -55,8 +57,9 @@ public class EllipticalConverter {
         FileInputStream in;
         
                 
-        //URL url = DecodeExample.class.getClass().getResource("/2381510478.fit");
-        URL url = DecodeExample.class.getClass().getResource("/outdoorrunning.fit");
+        URL url = DecodeExample.class.getClass().getResource("/2423623036.fit");
+//        URL url = DecodeExample.class.getClass().getResource("/rowingindoor.fit");
+//        URL url = DecodeExample.class.getClass().getResource("/outdoorrunning.fit");
 //        URL url = DecodeExample.class.getClass().getResource("/ExampleActivity.fit");
         File file = null;
         
@@ -128,7 +131,19 @@ public class EllipticalConverter {
             StringBuffer buffer = new StringBuffer();
             for(Field field: mesg.getFields()){
                 buffer.append(field.getName()+"["+field.getNum()+"]=>"+field.getValue()+" "+field.getUnits()+", ");
+                
             }
+            
+            /*for(Field field: mesg.getFields()){
+                int subFieldIndex = mesg.getActiveSubFieldIndex(field.getNum());
+                buffer.append("\nSUBS: "+field.getName(subFieldIndex)+"["+subFieldIndex+"]=>"+field.getValue(field.getNum(), subFieldIndex)+" "+field.getUnits(subFieldIndex)+", ");
+            }*/
+      
+            for(DeveloperField field: mesg.getDeveloperFields()){
+                buffer.append("\nDEVS: "+field.getName()+"["+field.getNum()+"]=>"+field.getValue()+" "+field.getUnits()+", ");
+            }
+      
+      
             System.out.println(buffer.toString());
             
             encoder.write(mesg);

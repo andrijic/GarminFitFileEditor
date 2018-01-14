@@ -7,8 +7,10 @@ package hr.iandrijic.garmin.fit;
 
 import com.garmin.fit.Decode;
 import com.garmin.fit.DeveloperField;
+import com.garmin.fit.Factory;
 import com.garmin.fit.Field;
 import com.garmin.fit.FieldBase;
+import com.garmin.fit.FieldDescriptionMesg;
 import com.garmin.fit.FileEncoder;
 import com.garmin.fit.Fit;
 import com.garmin.fit.FitRuntimeException;
@@ -16,6 +18,7 @@ import com.garmin.fit.Mesg;
 import com.garmin.fit.MesgBroadcaster;
 import com.garmin.fit.MesgListener;
 import com.garmin.fit.MesgNum;
+import com.garmin.fit.Profile;
 import com.garmin.fit.RecordMesg;
 import com.garmin.fit.examples.DecodeExample;
 import java.io.File;
@@ -57,10 +60,10 @@ public class EllipticalConverter {
         FileInputStream in;
         
                 
-        URL url = DecodeExample.class.getClass().getResource("/2423623036.fit");
+//        URL url = DecodeExample.class.getClass().getResource("/2431593594.fit");
 //        URL url = DecodeExample.class.getClass().getResource("/rowingindoor.fit");
 //        URL url = DecodeExample.class.getClass().getResource("/outdoorrunning.fit");
-//        URL url = DecodeExample.class.getClass().getResource("/ExampleActivity.fit");
+        URL url = DecodeExample.class.getClass().getResource("/ExampleActivity.fit");
         File file = null;
         
         try {
@@ -98,7 +101,24 @@ public class EllipticalConverter {
             throw new RuntimeException( "Error opening file" );
         }
         
-       
+        //add missing fields cadence and speed
+        FieldDescriptionMesg fieldDescMesg = new FieldDescriptionMesg();
+        fieldDescMesg.setDeveloperDataIndex( (short) 0 );
+        fieldDescMesg.setFieldDefinitionNumber( (short) 0 );
+        fieldDescMesg.setFitBaseTypeId( (short) Fit.BASE_TYPE_FLOAT32 );
+        fieldDescMesg.setFieldName( 0, "speed" );
+        fieldDescMesg.setUnits( 0, "m/s" );
+        fieldDescMesg.setNativeFieldNum((short)6);
+        encode.write(fieldDescMesg);
+        
+        fieldDescMesg = new FieldDescriptionMesg();
+        fieldDescMesg.setDeveloperDataIndex( (short) 0 );
+        fieldDescMesg.setFieldDefinitionNumber( (short) 0 );
+        fieldDescMesg.setFitBaseTypeId( (short) Fit.BASE_TYPE_FLOAT32 );
+        fieldDescMesg.setFieldName( 0, "cadence" );
+        fieldDescMesg.setUnits( 0, "rpm" );
+        fieldDescMesg.setNativeFieldNum((short)4);
+        encode.write(fieldDescMesg);
         
         if(decode.read(in, mesgBroadcaster, mesgBroadcaster) == true){
              try {
@@ -112,6 +132,7 @@ public class EllipticalConverter {
      private class MyMessageListener implements MesgListener{
          
          FileEncoder encoder;
+         private float last_distance = 0;
          
          public MyMessageListener(FileEncoder encoder){
              this.encoder = encoder;
@@ -130,18 +151,67 @@ public class EllipticalConverter {
             
             StringBuffer buffer = new StringBuffer();
             for(Field field: mesg.getFields()){
-                buffer.append(field.getName()+"["+field.getNum()+"]=>"+field.getValue()+" "+field.getUnits()+", ");
-                
+                buffer.append(field.getName()+"["+field.getNum()+"]=>"+field.getValue()+" "+field.getUnits()+", ");                
             }
             
-            /*for(Field field: mesg.getFields()){
-                int subFieldIndex = mesg.getActiveSubFieldIndex(field.getNum());
-                buffer.append("\nSUBS: "+field.getName(subFieldIndex)+"["+subFieldIndex+"]=>"+field.getValue(field.getNum(), subFieldIndex)+" "+field.getUnits(subFieldIndex)+", ");
-            }*/
-      
             for(DeveloperField field: mesg.getDeveloperFields()){
                 buffer.append("\nDEVS: "+field.getName()+"["+field.getNum()+"]=>"+field.getValue()+" "+field.getUnits()+", ");
+               
+               
+               
+               if(field.getName().equalsIgnoreCase("distance")){                   
+                    Field original_field = mesg.getField("distance");
+                    if(original_field != null){
+                        System.out.println("replacing speed distance");
+                        
+                        original_field.setValue(field.getValue());
+                    }else{
+                        System.out.println("adding new speed distance");
+                        
+                        Field new_field = Factory.createField("distance", 5);
+                        new_field.setValue(field.getValue());
+                        mesg.addField(new_field);
+                    }
+                    
+                    last_distance = (Float)field.getValue();
+               }
+               
+               if(field.getName().equalsIgnoreCase("speed")){                   
+                    Field original_field = mesg.getField("speed");
+                    if(original_field != null){
+                        System.out.println("replacing speed fields");
+                        
+                        original_field.setValue(field.getValue());
+                    }else{
+                        System.out.println("adding new speed field");
+                        
+                        Field new_field = Factory.createField("speed", 6);
+                        new_field.setValue(field.getValue());
+                        mesg.addField(new_field);
+                    }
+               }
+               
+               if(field.getName().equalsIgnoreCase("cadence")){                   
+                    Field original_field = mesg.getField("cadence");
+                    if(original_field != null){
+                        System.out.println("replacing cadence fields");
+                        
+                        original_field.setValue(field.getValue());
+                    }else{
+                        System.out.println("adding new cadence field");
+                        
+                        Field new_field = Factory.createField("cadence", 4);
+                        new_field.setValue(field.getValue());
+                        mesg.addField(new_field);
+                    }
+               }
             }
+            
+            
+            if(mesg.getField("total_distance") != null){
+                mesg.getField("total_distance").setValue(last_distance);
+            }
+           
       
       
             System.out.println(buffer.toString());
